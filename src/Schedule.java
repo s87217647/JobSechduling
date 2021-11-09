@@ -25,17 +25,21 @@ public class Schedule {
         // ran DFS on each, DFS can actually check for cycles
         // if new set.size() < Jobs.size(). We have unreachable here.
         // Cycle detections.
+        for(Job j : jobs)
+            j.explored = false;
+
 
         Stack<Job> stack = topologicalSort(dummy());
+        //stack
+        if (stack.isEmpty()){
+            return -1;
+        }
+
         int max = 0 ;
 
         while(!stack.isEmpty()){
             Job cur = stack.pop();
             for (Job child : cur.children){
-                stack.push(child);
-                if (!stack.contains(child)){
-                    return -1;
-                }
                 cur.relax(child);
                 max = Math.max(max, child.startTime + child.time);
             }
@@ -57,19 +61,23 @@ public class Schedule {
         //Remember cycle detection
 
         Stack stack = new Stack();
-        dfs(start,stack);
+         if (dfs(start,stack) && stack.size() > 1) {
+             return stack;
+         }
 
-        return stack;
+         return new Stack();
 
     }
-    void dfs(Job job, Stack stack){
+    boolean dfs(Job job, Stack stack){
         for (Job child : job.children){
-            if (!child.explored){
+            if (!child.explored)
                 dfs(child, stack);
-            }
+            else
+                return false;
         }
         job.explored = true;
         stack.push(job);
+        return true;
     }
      class Job{
         int time;
