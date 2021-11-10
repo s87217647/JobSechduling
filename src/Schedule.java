@@ -1,10 +1,6 @@
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.Stack;
+import java.util.*;
 
 public class Schedule {
-    // How to fucking represent and compute the graph?
     ArrayList<Job> jobs;
     public Schedule(){
         jobs = new ArrayList<>();
@@ -25,87 +21,77 @@ public class Schedule {
         // ran DFS on each, DFS can actually check for cycles
         // if new set.size() < Jobs.size(). We have unreachable here.
         // Cycle detections.
-        for(Job j : jobs)
-            j.explored = false;
 
-
-        Stack<Job> stack = topologicalSort(dummy());
-        //stack
-        if (stack.isEmpty()){
+        ArrayList<Schedule.Job> sorted = topoSort();
+        if (sorted.size() < jobs.size())
             return -1;
+
+        int max = 0;
+        for(Job j : sorted)
+            max = Math.max(max,j.relax());
+        Job lastJob = sorted.get(sorted.size() - 1);
+
+        return  max;
+    }
+
+
+    public ArrayList<Job> topoSort(){
+        ArrayList<Job> topo = new ArrayList<Job>();
+        for (Job job : jobs) {
+            job.inDegree = 0;
+            job.startTime = -1;
         }
+        for (Job job: jobs)
+            for (Job child : job.children)
+                child.inDegree ++;
 
-        int max = 0 ;
+        Queue<Job> q = new LinkedList<Job>();
 
-        while(!stack.isEmpty()){
-            Job cur = stack.pop();
-            for (Job child : cur.children){
-                cur.relax(child);
-                max = Math.max(max, child.startTime + child.time);
+        for (Job job : jobs)
+            if (job.inDegree == 0) {
+                job.startTime = 0;
+                q.add(job);
+            }
+        while (!q.isEmpty()){
+            Job j = q.remove();
+            topo.add(j);
+            for (Job child : j.children) {
+                child.inDegree --;
+                if (child.inDegree == 0) {
+                    q.add(child);
+                    child.startTime = 0;
+                }
             }
         }
-        return max;
-    }
-    public Job dummy(){
-        Job dummy = new Job(0);
-        for (Job j: jobs) {
-            if(j.preReq.isEmpty()) {
-                dummy.children.add(j);
-                //j.requires(dummy);// Sentinal, adopt all startless jobs
-            }
-        }
-        return dummy;
-    }
 
-    public Stack topologicalSort(Job start){
-        //Remember cycle detection
-
-        Stack stack = new Stack();
-         if (dfs(start,stack) && stack.size() > 1) {
-             return stack;
-         }
-
-         return new Stack();
+        return topo;
 
     }
-    boolean dfs(Job job, Stack stack){
-        for (Job child : job.children){
-            if (!child.explored)
-                dfs(child, stack);
-            else
-                return false;
-        }
-        job.explored = true;
-        stack.push(job);
-        return true;
-    }
+
      class Job{
         int time;
         int startTime;
-        Set<Job> preReq;
+        int inDegree;
         Set<Job> children;
-        boolean explored;
         Job(int time){
             this.time = time;
-            startTime = 0;
-            preReq = new HashSet<Job>();
             children = new HashSet<Job>();
-            explored = false;
         }
 
         void requires(Job j){
             j.children.add(this);
-            preReq.add(j);
         }
 
         int start(){
             return startTime;
         }
-        void relax(Job child){
-         int newStartTime = this.time + startTime;
-         if (newStartTime > child.startTime){
-             child.startTime = newStartTime;
-         }
+        int relax(){
+            int max = startTime + time;
+            for (Job child : children) {
+                child.startTime = Math.max(child.startTime, this.startTime + time);
+                max = Math.max( max,child.startTime + child.time);
+            }
+            return max;
         }
     }
 }
